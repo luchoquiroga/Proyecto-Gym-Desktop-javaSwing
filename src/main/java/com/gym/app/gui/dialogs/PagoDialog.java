@@ -1,4 +1,4 @@
-package com.gym.app.gui.panels;
+package com.gym.app.gui.dialogs;
 
 import com.gym.app.models.Pago;
 import com.gym.app.services.PagoService;

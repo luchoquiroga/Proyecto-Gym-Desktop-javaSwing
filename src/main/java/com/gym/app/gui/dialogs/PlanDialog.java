@@ -1,4 +1,4 @@
-package com.gym.app.gui.panels;
+package com.gym.app.gui.dialogs;
 
 import com.gym.app.models.Plan;
 import com.gym.app.services.PlanService;

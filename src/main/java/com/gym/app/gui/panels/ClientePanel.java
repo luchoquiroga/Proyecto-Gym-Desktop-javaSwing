@@ -1,5 +1,6 @@
 package com.gym.app.gui.panels;
 
+import com.gym.app.gui.dialogs.ClienteDialog;
 import com.gym.app.models.Cliente;
 import com.gym.app.services.ClienteService;
 

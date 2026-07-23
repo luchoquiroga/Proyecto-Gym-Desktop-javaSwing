@@ -1,5 +1,6 @@
 package com.gym.app.gui.panels;
 
+import com.gym.app.gui.dialogs.PagoDialog;
 import com.gym.app.models.Pago;
 import com.gym.app.services.PagoService;
 
