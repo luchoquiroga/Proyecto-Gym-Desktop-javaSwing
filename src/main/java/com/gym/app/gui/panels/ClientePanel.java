@@ -63,6 +63,16 @@ public class ClientePanel extends JPanel {
 
         // --- 3. EVENTOS ---
         btnActualizar.addActionListener(e -> cargarDatos());
+        btnNuevo.addActionListener(e -> {
+            // Abrimos el diálogo modal pasando la ventana principal como referencia
+            ClienteDialog dialog = new ClienteDialog((Frame) SwingUtilities.getWindowAncestor(this));
+            dialog.setVisible(true);
+
+            // Si el usuario guardó con éxito, recargamos la tabla automáticamente
+            if (dialog.isGuardadoExitoso()) {
+                cargarDatos();
+            }
+        });
     }
 
     private void cargarDatos() {
