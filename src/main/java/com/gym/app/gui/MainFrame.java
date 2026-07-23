@@ -29,8 +29,8 @@ public class MainFrame extends JFrame {
         // Por ahora usamos paneles de prueba. Luego reemplazaremos por new ClientePanel(), etc.
         panelContenedor.add(crearPanelPrueba("Dashboard - Resumen General"), "DASHBOARD");
         panelContenedor.add(new com.gym.app.gui.panels.ClientePanel(), "CLIENTES");
-        panelContenedor.add(crearPanelPrueba("Gestión de Planes"), "PLANES");
-        panelContenedor.add(crearPanelPrueba("Gestión de Pagos"), "PAGOS");
+        panelContenedor.add(new com.gym.app.gui.panels.PlanPanel(), "PLANES");
+        panelContenedor.add(new com.gym.app.gui.panels.PagoPanel(), "PAGOS");
 
         // 3. Creamos el menú lateral
         JPanel panelMenu = crearMenuLateral();
