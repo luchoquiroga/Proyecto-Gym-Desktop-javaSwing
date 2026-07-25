@@ -5,7 +5,10 @@ import com.gym.app.models.Cliente;
 import com.gym.app.services.ClienteService;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.util.List;
 
@@ -16,6 +19,8 @@ public class ClientePanel extends JPanel {
     private JButton btnActualizar;
     private JButton btnNuevo;
     private final ClienteService clienteService;
+    private JTextField txtBuscar; // Paso 1: Declarar el campo de texto para la búsqueda
+    private TableRowSorter<DefaultTableModel> sorter; // Paso 1: Declarar el ordenador de filas
 
     public ClientePanel() {
         this.clienteService = new ClienteService();
@@ -26,6 +31,10 @@ public class ClientePanel extends JPanel {
     private void initUI() {
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        // --- Panel Superior General (contendrá título/botones y buscador) ---
+        JPanel mainNorthPanel = new JPanel();
+        mainNorthPanel.setLayout(new BoxLayout(mainNorthPanel, BoxLayout.Y_AXIS)); // Usamos BoxLayout para apilar verticalmente
 
         // --- 1. TÍTULO Y BOTONES SUPERIORES ---
         JPanel panelTop = new JPanel(new BorderLayout());
@@ -43,7 +52,18 @@ public class ClientePanel extends JPanel {
         panelTop.add(panelBotones, BorderLayout.EAST);
         panelTop.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
 
-        add(panelTop, BorderLayout.NORTH);
+        mainNorthPanel.add(panelTop); // Agregamos el panel de título/botones al panel superior general
+
+        // --- Paso 2: Inicializar el buscador y agregarlo ---
+        JPanel panelBuscar = new JPanel(new FlowLayout(FlowLayout.LEFT)); // Usamos FlowLayout para el buscador
+        txtBuscar = new JTextField(20);
+        panelBuscar.add(new JLabel("Buscar Cliente: "));
+        panelBuscar.add(txtBuscar);
+        panelBuscar.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0)); // Pequeño margen inferior
+
+        mainNorthPanel.add(panelBuscar); // Agregamos el panel del buscador al panel superior general
+
+        add(mainNorthPanel, BorderLayout.NORTH); // Agregamos el panel superior general al NORTH del ClientePanel
 
         // --- 2. TABLA DE DATOS ---
         String[] columnas = {"ID", "Nombre", "Apellido", "DNI", "Estado"};
@@ -57,6 +77,10 @@ public class ClientePanel extends JPanel {
         tablaClientes = new JTable(modeloTabla);
         tablaClientes.setRowHeight(25);
         tablaClientes.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
+
+        // Paso 3: Configurar el filtro en el modelo de la tabla
+        sorter = new TableRowSorter<>(modeloTabla);
+        tablaClientes.setRowSorter(sorter);
 
         // Metemos la tabla en un ScrollPane por si hay muchos clientes
         JScrollPane scrollPane = new JScrollPane(tablaClientes);
@@ -72,6 +96,24 @@ public class ClientePanel extends JPanel {
             // Si el usuario guardó con éxito, recargamos la tabla automáticamente
             if (dialog.isGuardadoExitoso()) {
                 cargarDatos();
+            }
+        });
+
+        // Paso 4: La Magia (El Listener que escucha cada tecla)
+        txtBuscar.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                filtrar();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                filtrar();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                filtrar();
             }
         });
     }
@@ -100,6 +142,7 @@ public class ClientePanel extends JPanel {
                                 c.getEstado()
                         });
                     }
+                    filtrar(); // Aplicar filtro después de cargar datos
                 } catch (Exception e) {
                     JOptionPane.showMessageDialog(ClientePanel.this,
                             "Error al cargar clientes: " + e.getMessage(),
@@ -111,5 +154,16 @@ public class ClientePanel extends JPanel {
             }
         };
         worker.execute();
+    }
+
+    // Paso 5: Crear el método filtrar()
+    private void filtrar() {
+        String texto = txtBuscar.getText();
+        if (texto.trim().length() == 0) {
+            sorter.setRowFilter(null); // Si está vacío, muestra todo
+        } else {
+            // El "(?i)" hace que la búsqueda ignore mayúsculas y minúsculas
+            sorter.setRowFilter(RowFilter.regexFilter("(?i)" + texto));
+        }
     }
 }
