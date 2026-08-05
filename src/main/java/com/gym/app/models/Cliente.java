@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName;
 
 public class Cliente {
     public enum Estado {
-        activo, inactivo
+        activo,moroso, inactivo
     }
 
     private Integer id;
@@ -16,6 +16,9 @@ public class Cliente {
 
     @SerializedName("fecha_inscripcion")
     private String fechaInscripcion; // Formato ISO devuelto por la API
+
+    @SerializedName("fecha_vencimiento")
+    private String fechaVencimiento;
 
     private Estado estado;
 
@@ -49,4 +52,7 @@ public class Cliente {
     public String getNombreCompleto() {
         return nombre + " " + apellido;
     }
+
+    public String getFechaVencimiento() {return fechaVencimiento;}
+    public void setFechaVencimiento(String fechaVencimiento) {this.fechaVencimiento = fechaVencimiento;}
 }
