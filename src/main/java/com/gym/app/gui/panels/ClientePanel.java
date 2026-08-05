@@ -35,19 +35,16 @@ public class ClientePanel extends JPanel {
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        // --- 1. TÍTULO Y CONTROLES SUPERIORES ---
-        // --- Panel Superior General (contendrá título/botones y buscador) ---
+        // --- 1. TÍTULO, CONTROLES SUPERIORES Y BUSCADOR ---
         JPanel mainNorthPanel = new JPanel();
-        mainNorthPanel.setLayout(new BoxLayout(mainNorthPanel, BoxLayout.Y_AXIS)); // Usamos BoxLayout para apilar verticalmente
+        mainNorthPanel.setLayout(new BoxLayout(mainNorthPanel, BoxLayout.Y_AXIS));
 
-        // --- 1. TÍTULO Y BOTONES SUPERIORES ---
+        // Panel de Título y Botones
         JPanel panelTop = new JPanel(new BorderLayout());
         JLabel lblTitulo = new JLabel("Gestión de Clientes");
         lblTitulo.setFont(new Font("SansSerif", Font.BOLD, 20));
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-
-        // Agregamos el selector de ordenamiento
         cbxOrden = new JComboBox<>(new String[]{"Orden: Próximos a Vencer", "Orden: Alfabético (Apellido)"});
         btnActualizar = new JButton("Actualizar Tabla");
         btnNuevo = new JButton("+ Nuevo Cliente");
@@ -61,20 +58,20 @@ public class ClientePanel extends JPanel {
         panelTop.add(panelBotones, BorderLayout.EAST);
         panelTop.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
 
-        mainNorthPanel.add(panelTop); // Agregamos el panel de título/botones al panel superior general
+        mainNorthPanel.add(panelTop);
 
-        // --- Paso 2: Inicializar el buscador y agregarlo ---
-        JPanel panelBuscar = new JPanel(new FlowLayout(FlowLayout.LEFT)); // Usamos FlowLayout para el buscador
+        // Panel del Buscador
+        JPanel panelBuscar = new JPanel(new FlowLayout(FlowLayout.LEFT));
         txtBuscar = new JTextField(20);
         panelBuscar.add(new JLabel("Buscar Cliente: "));
         panelBuscar.add(txtBuscar);
-        panelBuscar.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0)); // Pequeño margen inferior
+        panelBuscar.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
 
-        mainNorthPanel.add(panelBuscar); // Agregamos el panel del buscador al panel superior general
+        mainNorthPanel.add(panelBuscar);
 
-        add(mainNorthPanel, BorderLayout.NORTH); // Agregamos el panel superior general al NORTH del ClientePanel
+        add(mainNorthPanel, BorderLayout.NORTH);
 
-        // --- 2. TABLA DE DATOS (Agregamos la columna Vencimiento) ---
+        // --- 2. TABLA DE DATOS ---
         String[] columnas = {"Nombre", "Apellido", "DNI", "Estado", "Vencimiento"};
         modeloTabla = new DefaultTableModel(columnas, 0) {
             @Override
@@ -87,20 +84,16 @@ public class ClientePanel extends JPanel {
         tablaClientes.setRowHeight(25);
         tablaClientes.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
 
-        // --- AGREGÁ ESTAS DOS LÍNEAS ACÁ ---
         tablaClientes.getColumnModel().getColumn(3).setCellRenderer(new EstadoRenderer());
         tablaClientes.getColumnModel().getColumn(4).setCellRenderer(new AlertaVencimientoRenderer());
 
-        // Paso 3: Configurar el filtro en el modelo de la tabla
         sorter = new TableRowSorter<>(modeloTabla);
         tablaClientes.setRowSorter(sorter);
 
-        // Metemos la tabla en un ScrollPane por si hay muchos clientes
         JScrollPane scrollPane = new JScrollPane(tablaClientes);
         add(scrollPane, BorderLayout.CENTER);
 
         // --- 3. EVENTOS ---
-        // Al cambiar la opción del ComboBox, recargamos la tabla con el orden elegido
         cbxOrden.addActionListener(e -> {
             String ordenElegido = cbxOrden.getSelectedIndex() == 0 ? "vencimiento" : "apellido";
             cargarDatos(ordenElegido);
@@ -121,22 +114,13 @@ public class ClientePanel extends JPanel {
             }
         });
 
-        // Paso 4: La Magia (El Listener que escucha cada tecla)
         txtBuscar.getDocument().addDocumentListener(new DocumentListener() {
             @Override
-            public void insertUpdate(DocumentEvent e) {
-                filtrar();
-            }
-
+            public void insertUpdate(DocumentEvent e) { filtrar(); }
             @Override
-            public void removeUpdate(DocumentEvent e) {
-                filtrar();
-            }
-
+            public void removeUpdate(DocumentEvent e) { filtrar(); }
             @Override
-            public void changedUpdate(DocumentEvent e) {
-                filtrar();
-            }
+            public void changedUpdate(DocumentEvent e) { filtrar(); }
         });
     }
 
