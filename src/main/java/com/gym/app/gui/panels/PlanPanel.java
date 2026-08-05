@@ -45,7 +45,7 @@ public class PlanPanel extends JPanel {
         add(panelTop, BorderLayout.NORTH);
 
         // Tabla
-        String[] columnas = {"ID", "Nombre", "Precio", "Duración (Días)"};
+        String[] columnas = {"Nombre", "Precio", "Duración (Días)"};
         modeloTabla = new DefaultTableModel(columnas, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -87,7 +87,6 @@ public class PlanPanel extends JPanel {
                     List<Plan> planes = get();
                     for (Plan p : planes) {
                         modeloTabla.addRow(new Object[]{
-                                p.getId(),
                                 p.getNombre(),
                                 p.getPrecio(),
                                 p.getDuracionDias()

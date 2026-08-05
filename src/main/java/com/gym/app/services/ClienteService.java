@@ -11,12 +11,12 @@ public class ClienteService {
     /**
      * Obtiene la lista completa de clientes desde la API
      */
-    public List<Cliente> listarClientes() throws Exception {
+    public List<Cliente> listarClientes(String orden) throws Exception {
         // Le decimos a Gson qué tipo de lista exacta esperamos recibir
         Type tipoLista = new TypeToken<List<Cliente>>(){}.getType();
 
         // Hacemos un GET a /clientes (el ApiClient ya inyecta el Token JWT automáticamente)
-        return ApiClient.getList("/clientes", tipoLista);
+        return ApiClient.getList("/clientes?orden=" + orden , tipoLista);
     }
 
     /**

@@ -3,6 +3,8 @@ package com.gym.app.gui.panels;
 import com.gym.app.gui.dialogs.ClienteDialog;
 import com.gym.app.models.Cliente;
 import com.gym.app.services.ClienteService;
+import com.gym.app.gui.render.AlertaVencimientoRenderer;
+import com.gym.app.gui.render.EstadoRenderer;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -18,6 +20,7 @@ public class ClientePanel extends JPanel {
     private DefaultTableModel modeloTabla;
     private JButton btnActualizar;
     private JButton btnNuevo;
+    private JComboBox<String> cbxOrden; // <-- COMBOBOX PARA ELEGIR EL ORDEN
     private final ClienteService clienteService;
     private JTextField txtBuscar; // Paso 1: Declarar el campo de texto para la búsqueda
     private TableRowSorter<DefaultTableModel> sorter; // Paso 1: Declarar el ordenador de filas
@@ -25,13 +28,14 @@ public class ClientePanel extends JPanel {
     public ClientePanel() {
         this.clienteService = new ClienteService();
         initUI();
-        cargarDatos(); // Cargamos la tabla apenas se crea el panel
+        cargarDatos("vencimiento"); // Por defecto cargamos por vencimiento
     }
 
     private void initUI() {
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
+        // --- 1. TÍTULO Y CONTROLES SUPERIORES ---
         // --- Panel Superior General (contendrá título/botones y buscador) ---
         JPanel mainNorthPanel = new JPanel();
         mainNorthPanel.setLayout(new BoxLayout(mainNorthPanel, BoxLayout.Y_AXIS)); // Usamos BoxLayout para apilar verticalmente
@@ -42,9 +46,14 @@ public class ClientePanel extends JPanel {
         lblTitulo.setFont(new Font("SansSerif", Font.BOLD, 20));
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+
+        // Agregamos el selector de ordenamiento
+        cbxOrden = new JComboBox<>(new String[]{"Orden: Próximos a Vencer", "Orden: Alfabético (Apellido)"});
         btnActualizar = new JButton("Actualizar Tabla");
         btnNuevo = new JButton("+ Nuevo Cliente");
 
+        panelBotones.add(new JLabel("Mostrar por: "));
+        panelBotones.add(cbxOrden);
         panelBotones.add(btnActualizar);
         panelBotones.add(btnNuevo);
 
@@ -65,18 +74,22 @@ public class ClientePanel extends JPanel {
 
         add(mainNorthPanel, BorderLayout.NORTH); // Agregamos el panel superior general al NORTH del ClientePanel
 
-        // --- 2. TABLA DE DATOS ---
-        String[] columnas = {"ID", "Nombre", "Apellido", "DNI", "Estado"};
+        // --- 2. TABLA DE DATOS (Agregamos la columna Vencimiento) ---
+        String[] columnas = {"Nombre", "Apellido", "DNI", "Estado", "Vencimiento"};
         modeloTabla = new DefaultTableModel(columnas, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false; // Evita que editen las celdas haciendo doble clic
+                return false;
             }
         };
 
         tablaClientes = new JTable(modeloTabla);
         tablaClientes.setRowHeight(25);
         tablaClientes.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
+
+        // --- AGREGÁ ESTAS DOS LÍNEAS ACÁ ---
+        tablaClientes.getColumnModel().getColumn(3).setCellRenderer(new EstadoRenderer());
+        tablaClientes.getColumnModel().getColumn(4).setCellRenderer(new AlertaVencimientoRenderer());
 
         // Paso 3: Configurar el filtro en el modelo de la tabla
         sorter = new TableRowSorter<>(modeloTabla);
@@ -87,15 +100,24 @@ public class ClientePanel extends JPanel {
         add(scrollPane, BorderLayout.CENTER);
 
         // --- 3. EVENTOS ---
-        btnActualizar.addActionListener(e -> cargarDatos());
+        // Al cambiar la opción del ComboBox, recargamos la tabla con el orden elegido
+        cbxOrden.addActionListener(e -> {
+            String ordenElegido = cbxOrden.getSelectedIndex() == 0 ? "vencimiento" : "apellido";
+            cargarDatos(ordenElegido);
+        });
+
+        btnActualizar.addActionListener(e -> {
+            String ordenElegido = cbxOrden.getSelectedIndex() == 0 ? "vencimiento" : "apellido";
+            cargarDatos(ordenElegido);
+        });
+
         btnNuevo.addActionListener(e -> {
-            // Abrimos el diálogo modal pasando la ventana principal como referencia
             ClienteDialog dialog = new ClienteDialog((Frame) SwingUtilities.getWindowAncestor(this));
             dialog.setVisible(true);
 
-            // Si el usuario guardó con éxito, recargamos la tabla automáticamente
             if (dialog.isGuardadoExitoso()) {
-                cargarDatos();
+                String ordenElegido = cbxOrden.getSelectedIndex() == 0 ? "vencimiento" : "apellido";
+                cargarDatos(ordenElegido);
             }
         });
 
@@ -118,15 +140,18 @@ public class ClientePanel extends JPanel {
         });
     }
 
-    private void cargarDatos() {
+    // Aceptamos el parámetro 'orden' para pasarlo a tu ClienteService
+    private void cargarDatos(String orden) {
         btnActualizar.setEnabled(false);
+        cbxOrden.setEnabled(false);
         btnActualizar.setText("Cargando...");
-        modeloTabla.setRowCount(0); // Limpiamos la tabla antes de cargar
+        modeloTabla.setRowCount(0);
 
         SwingWorker<List<Cliente>, Void> worker = new SwingWorker<>() {
             @Override
             protected List<Cliente> doInBackground() throws Exception {
-                return clienteService.listarClientes();
+                // Pasamos el criterio de ordenamiento a nuestro servicio
+                return clienteService.listarClientes(orden);
             }
 
             @Override
@@ -135,11 +160,11 @@ public class ClientePanel extends JPanel {
                     List<Cliente> clientes = get();
                     for (Cliente c : clientes) {
                         modeloTabla.addRow(new Object[]{
-                                c.getId(),
-                                c.getNombre(),
-                                c.getApellido(),
-                                c.getDni(),
-                                c.getEstado()
+                                c.getNombre(),     // Columna 0
+                                c.getApellido(),   // Columna 1
+                                c.getDni(),        // Columna 2
+                                c.getEstado(),     // Columna 3
+                                c.getFechaVencimiento() != null ? c.getFechaVencimiento() : "---" // Columna 4
                         });
                     }
                     filtrar(); // Aplicar filtro después de cargar datos
@@ -149,6 +174,7 @@ public class ClientePanel extends JPanel {
                             "Error", JOptionPane.ERROR_MESSAGE);
                 } finally {
                     btnActualizar.setEnabled(true);
+                    cbxOrden.setEnabled(true);
                     btnActualizar.setText("Actualizar Tabla");
                 }
             }

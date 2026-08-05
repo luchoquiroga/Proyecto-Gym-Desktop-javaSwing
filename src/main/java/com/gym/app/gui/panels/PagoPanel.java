@@ -45,7 +45,7 @@ public class PagoPanel extends JPanel {
         add(panelTop, BorderLayout.NORTH);
 
         // Tabla
-        String[] columnas = {"ID", "Cliente", "Plan", "Monto", "Fecha"};
+        String[] columnas = {"Cliente", "Plan", "Monto", "Fecha"};
         modeloTabla = new DefaultTableModel(columnas, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -86,12 +86,17 @@ public class PagoPanel extends JPanel {
                 try {
                     List<Pago> pagos = get();
                     for (Pago p : pagos) {
+
+                        String fechaCruda = p.getFechaPago();
+                        String fechaPagoLimpia = (fechaCruda != null && fechaCruda.length() >= 10)
+                                ? fechaCruda.substring(0, 10)
+                                : "---";
+
                         modeloTabla.addRow(new Object[]{
-                                p.getId(),
                                 p.getNombreCompletoCliente(), // ¡El modelo resuelve cómo mostrar el cliente!
                                 p.getPlanNombre(),            // El modelo provee el nombre del plan directamente
                                 p.getMontoAbonado(),
-                                p.getFechaPago()
+                                fechaPagoLimpia
                         });
                     }
                 } catch (Exception e) {
