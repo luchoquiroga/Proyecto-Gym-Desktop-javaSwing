@@ -16,4 +16,16 @@ public class PlanService {
     public Plan crearPlan(Plan nuevoPlan) throws Exception {
         return ApiClient.post("/planes", nuevoPlan, Plan.class);
     }
+
+    public Plan actualizarPlan(Integer id, Plan plan) throws Exception {
+        return ApiClient.put("/planes/" + id, plan, Plan.class);
+    }
+
+    /**
+     * Elimina un plan. El backend rechaza la operación (con mensaje explicativo)
+     * si ya existen pagos registrados asociados a ese plan.
+     */
+    public void eliminarPlan(Integer id) throws Exception {
+        ApiClient.delete("/planes/" + id);
+    }
 }

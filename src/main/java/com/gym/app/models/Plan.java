@@ -1,15 +1,12 @@
 package com.gym.app.models;
 
-import com.google.gson.annotations.SerializedName;
 import java.math.BigDecimal;
 
 public class Plan {
     private Integer id;
     private String nombre;
     private BigDecimal precio;
-
-    @SerializedName("duracion_dias")
-    private Integer duracionDias;
+    private Integer duracion;
 
     public Plan() {}
 
@@ -23,6 +20,11 @@ public class Plan {
     public BigDecimal getPrecio() { return precio; }
     public void setPrecio(BigDecimal precio) { this.precio = precio; }
 
-    public Integer getDuracionDias() { return duracionDias; }
-    public void setDuracionDias(Integer duracionDias) { this.duracionDias = duracionDias; }
+    public Integer getDuracion() { return duracion; }
+    public void setDuracion(Integer duracion) { this.duracion = duracion; }
+
+    @Override
+    public String toString() {
+        return String.format("%s - $%,.2f (%d días)", nombre, precio, duracion);
+    }
 }

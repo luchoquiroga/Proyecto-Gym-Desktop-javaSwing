@@ -9,14 +9,12 @@ import java.util.List;
 public class ClienteService {
 
     /**
-     * Obtiene la lista completa de clientes desde la API
+     * Obtiene la lista completa de clientes desde la API.
+     * El backend no soporta ordenamiento por query param; el orden se aplica en el cliente Swing.
      */
-    public List<Cliente> listarClientes(String orden) throws Exception {
-        // Le decimos a Gson qué tipo de lista exacta esperamos recibir
+    public List<Cliente> listarClientes() throws Exception {
         Type tipoLista = new TypeToken<List<Cliente>>(){}.getType();
-
-        // Hacemos un GET a /clientes (el ApiClient ya inyecta el Token JWT automáticamente)
-        return ApiClient.getList("/clientes?orden=" + orden , tipoLista);
+        return ApiClient.getList("/clientes", tipoLista);
     }
 
     /**
@@ -24,5 +22,20 @@ public class ClienteService {
      */
     public Cliente crearCliente(Cliente nuevoCliente) throws Exception {
         return ApiClient.post("/clientes", nuevoCliente, Cliente.class);
+    }
+
+    /**
+     * Actualiza nombre, apellido y teléfono de un cliente existente.
+     * El backend ignora el campo estado en este endpoint (tiene su propio flujo de cambio de estado).
+     */
+    public Cliente actualizarCliente(Integer id, Cliente cliente) throws Exception {
+        return ApiClient.put("/clientes/" + id, cliente, Cliente.class);
+    }
+
+    /**
+     * Da de baja a un cliente (baja lógica: el backend lo pasa a estado INACTIVO).
+     */
+    public void darDeBaja(Integer id) throws Exception {
+        ApiClient.delete("/clientes/" + id);
     }
 }

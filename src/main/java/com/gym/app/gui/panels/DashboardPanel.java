@@ -1,18 +1,23 @@
 package com.gym.app.gui.panels;
 
-import com.google.gson.Gson;
-import com.gym.app.models.EstadisticasDTO;
+import com.gym.app.models.Cliente;
+import com.gym.app.models.GananciasMensuales;
+import com.gym.app.services.ClienteService;
+import com.gym.app.services.DashboardService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.time.LocalDate;
+import java.util.List;
 
 public class DashboardPanel extends JPanel {
+
+    private static final String[] NOMBRES_MESES = {
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    };
 
     // Etiquetas donde mostraremos los números actualizados
     private JLabel lblActivos;
@@ -20,7 +25,15 @@ public class DashboardPanel extends JPanel {
     private JLabel lblTotalClientes;
     private JLabel lblRecaudacion;
 
-    public DashboardPanel() {
+    private JComboBox<String> cbxMes;
+    private JComboBox<Integer> cbxAnio;
+
+    private final boolean esAdmin;
+    private final ClienteService clienteService = new ClienteService();
+    private final DashboardService dashboardService = new DashboardService();
+
+    public DashboardPanel(boolean esAdmin) {
+        this.esAdmin = esAdmin;
         initComponents();
         cargarDatosDesdeAPI();
     }
@@ -35,7 +48,18 @@ public class DashboardPanel extends JPanel {
         JLabel lblTitulo = new JLabel("Resumen General del Gimnasio");
         lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 24));
         lblTitulo.setForeground(new Color(40, 40, 40));
-        this.add(lblTitulo, BorderLayout.NORTH);
+
+        JPanel panelNorte = new JPanel(new BorderLayout());
+        panelNorte.setOpaque(false);
+        panelNorte.add(lblTitulo, BorderLayout.NORTH);
+
+        // Selector de mes/año: solo tiene sentido para ADMIN, único rol habilitado
+        // para consultar /dashboard/ganancias-mensuales en el backend.
+        if (esAdmin) {
+            panelNorte.add(crearSelectorPeriodo(), BorderLayout.SOUTH);
+        }
+
+        this.add(panelNorte, BorderLayout.NORTH);
 
         // Panel de Tarjetas (Grilla 2x2 con separación de 20px)
         JPanel panelTarjetas = new JPanel(new GridLayout(2, 2, 20, 20));
@@ -49,11 +73,39 @@ public class DashboardPanel extends JPanel {
 
         // Agregamos las 4 tarjetas personalizadas
         panelTarjetas.add(crearTarjeta("CLIENTES ACTIVOS", lblActivos, new Color(46, 204, 113)));     // Verde
-        panelTarjetas.add(crearTarjeta("CLIENTES INACTIVOS", lblInactivos, new Color(231, 76, 60)));  // Rojo
+        panelTarjetas.add(crearTarjeta("CLIENTES INACTIVOS/MOROSOS", lblInactivos, new Color(231, 76, 60)));  // Rojo
         panelTarjetas.add(crearTarjeta("TOTAL SOCIOS", lblTotalClientes, new Color(52, 152, 219)));   // Azul
         panelTarjetas.add(crearTarjeta("RECAUDACIÓN DEL MES", lblRecaudacion, new Color(241, 196, 15))); // Dorado
 
         this.add(panelTarjetas, BorderLayout.CENTER);
+    }
+
+    private JPanel crearSelectorPeriodo() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panel.setOpaque(false);
+
+        LocalDate hoy = LocalDate.now();
+
+        cbxMes = new JComboBox<>(NOMBRES_MESES);
+        cbxMes.setSelectedIndex(hoy.getMonthValue() - 1);
+
+        int anioActual = hoy.getYear();
+        Integer[] anios = new Integer[6];
+        for (int i = 0; i < anios.length; i++) {
+            anios[i] = anioActual - i;
+        }
+        cbxAnio = new JComboBox<>(anios);
+
+        JButton btnConsultar = new JButton("Consultar");
+        btnConsultar.addActionListener(e -> cargarRecaudacionMes());
+
+        panel.add(new JLabel("Mes:"));
+        panel.add(cbxMes);
+        panel.add(new JLabel("Año:"));
+        panel.add(cbxAnio);
+        panel.add(btnConsultar);
+
+        return panel;
     }
 
     // Método auxiliar para diseñar las "Tarjetas" visuales
@@ -80,48 +132,70 @@ public class DashboardPanel extends JPanel {
         return tarjeta;
     }
 
-    // --- CONEXIÓN CON TU BACKEND NODE.JS ---
     private void cargarDatosDesdeAPI() {
-        // Ejecutamos la petición en un hilo secundario para no congelar la ventana
+        // Ejecutamos ambas peticiones en un hilo secundario para no congelar la ventana
+        new Thread(() -> {
+            cargarEstadisticasClientes();
+            cargarRecaudacionMes();
+        }).start();
+    }
+
+    /**
+     * El backend no tiene un endpoint agregado de estadísticas de clientes,
+     * así que traemos la lista completa (GET /clientes, accesible para ADMIN o GERENCIA)
+     * y contamos los estados acá.
+     */
+    private void cargarEstadisticasClientes() {
+        try {
+            List<Cliente> clientes = clienteService.listarClientes();
+
+            int activos = 0;
+            int inactivosOMorosos = 0;
+            for (Cliente c : clientes) {
+                if (c.getEstado() == Cliente.Estado.ACTIVO) {
+                    activos++;
+                } else {
+                    inactivosOMorosos++;
+                }
+            }
+
+            int total = clientes.size();
+            final int activosFinal = activos;
+            final int inactivosFinal = inactivosOMorosos;
+            SwingUtilities.invokeLater(() -> {
+                lblActivos.setText(String.valueOf(activosFinal));
+                lblInactivos.setText(String.valueOf(inactivosFinal));
+                lblTotalClientes.setText(String.valueOf(total));
+            });
+        } catch (Exception e) {
+            System.err.println("Error al obtener clientes para el dashboard: " + e.getMessage());
+            SwingUtilities.invokeLater(() -> {
+                lblActivos.setText("Error");
+                lblInactivos.setText("Error");
+                lblTotalClientes.setText("Error");
+            });
+        }
+    }
+
+    /**
+     * Endpoint restringido a rol ADMIN en el backend: si el usuario logueado es GERENCIA,
+     * la petición devuelve 403 y mostramos "N/A" en vez de romper el panel.
+     */
+    private void cargarRecaudacionMes() {
+        SwingUtilities.invokeLater(() -> lblRecaudacion.setText("..."));
+
         new Thread(() -> {
             try {
-                URL url = new URL("http://localhost:3000/api/estadisticas"); // Ajustá el puerto si es necesario
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
-                conn.setRequestProperty("Accept", "application/json");
-
-                if (conn.getResponseCode() == 200) {
-                    BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                    StringBuilder jsonRespuesta = new StringBuilder();
-                    String linea;
-                    while ((linea = br.readLine()) != null) {
-                        jsonRespuesta.append(linea);
-                    }
-                    br.close();
-
-                    // Mapeamos el JSON a nuestro DTO con Gson
-                    Gson gson = new Gson();
-                    EstadisticasDTO stats = gson.fromJson(jsonRespuesta.toString(), EstadisticasDTO.class);
-
-                    // Actualizamos la interfaz gráfica (siempre desde el hilo de Swing)
-                    SwingUtilities.invokeLater(() -> {
-                        lblActivos.setText(String.valueOf(stats.getClientes().getActivos()));
-                        lblInactivos.setText(String.valueOf(stats.getClientes().getInactivos()));
-                        lblTotalClientes.setText(String.valueOf(stats.getClientes().getTotal()));
-
-                        // Formateamos la plata con signo $
-                        lblRecaudacion.setText(String.format("$ %,.2f", stats.getFinanzas().getRecaudacionMes()));
-                    });
-                }
-                conn.disconnect();
+                GananciasMensuales ganancias = esAdmin
+                        ? dashboardService.obtenerGananciasMensuales(
+                                (Integer) cbxAnio.getSelectedItem(), cbxMes.getSelectedIndex() + 1)
+                        : dashboardService.obtenerGananciasMensuales();
+                SwingUtilities.invokeLater(() ->
+                        lblRecaudacion.setText(String.format("$ %,.2f", ganancias.getTotalGanancias()))
+                );
             } catch (Exception e) {
-                System.err.println("Error al obtener estadísticas del backend: " + e.getMessage());
-                SwingUtilities.invokeLater(() -> {
-                    lblActivos.setText("Error");
-                    lblInactivos.setText("Error");
-                    lblTotalClientes.setText("Error");
-                    lblRecaudacion.setText("Error");
-                });
+                System.err.println("Error al obtener ganancias mensuales: " + e.getMessage());
+                SwingUtilities.invokeLater(() -> lblRecaudacion.setText("N/A"));
             }
         }).start();
     }

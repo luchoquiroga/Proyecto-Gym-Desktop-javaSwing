@@ -2,14 +2,12 @@ package com.gym.app.models;
 
 public class Usuario {
     public enum Rol {
-        admin, recepcion, usuario
+        ADMIN, GERENCIA
     }
     private Integer id;
     private String nombre;
-    private String email;
-    private String pass;
+    private String contrasena;
     private Rol rol;
-    private String telefono;
 
     public Usuario() {}
 
@@ -20,15 +18,9 @@ public class Usuario {
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public String getPass() { return pass; }
-    public void setPass(String pass) { this.pass = pass; }
+    public String getContrasena() { return contrasena; }
+    public void setContrasena(String contrasena) { this.contrasena = contrasena; }
 
     public Rol getRol() { return rol; }
     public void setRol(Rol rol) { this.rol = rol; }
-
-    public String getTelefono() { return telefono; }
-    public void setTelefono(String telefono) { this.telefono = telefono; }
 }

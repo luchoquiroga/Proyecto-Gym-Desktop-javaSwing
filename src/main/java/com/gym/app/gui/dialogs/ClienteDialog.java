@@ -8,25 +8,43 @@ import java.awt.*;
 
 public class ClienteDialog extends JDialog {
 
-    private JTextField txtNombre, txtApellido, txtDni, txtEmail, txtTelefono;
-    private JComboBox<Cliente.Estado> cmbEstado;
+    private JTextField txtNombre, txtApellido, txtTelefono;
     private JButton btnGuardar, btnCancelar;
     private boolean guardadoExitoso = false;
     private final ClienteService clienteService;
+    private final Cliente clienteAEditar;
 
     public ClienteDialog(Frame parent) {
         super(parent, "Registrar Nuevo Cliente", true); // true = Modal (bloquea la ventana principal mientras está abierto)
         this.clienteService = new ClienteService();
+        this.clienteAEditar = null;
         initUI();
     }
 
+    /**
+     * Modo edición: precarga los campos con los datos del cliente y, al guardar,
+     * actualiza en vez de crear. El estado no se edita acá (el backend lo maneja aparte).
+     */
+    public ClienteDialog(Frame parent, Cliente clienteAEditar) {
+        super(parent, "Editar Cliente", true);
+        this.clienteService = new ClienteService();
+        this.clienteAEditar = clienteAEditar;
+        initUI();
+        txtNombre.setText(clienteAEditar.getNombre());
+        txtApellido.setText(clienteAEditar.getApellido());
+        txtTelefono.setText(clienteAEditar.getTelefono());
+        btnGuardar.setText("Guardar Cambios");
+    }
+
     private void initUI() {
-        setSize(400, 450);
+        setSize(400, 300);
         setLocationRelativeTo(getOwner());
         setLayout(new BorderLayout());
 
         // Panel de Formulario con GridLayout
-        JPanel panelForm = new JPanel(new GridLayout(6, 2, 10, 10));
+        // El Estado no se elige a mano: el backend lo inicia en INACTIVO y lo actualiza
+        // automáticamente (ACTIVO al registrar un pago, MOROSO/INACTIVO según vencimiento).
+        JPanel panelForm = new JPanel(new GridLayout(3, 2, 10, 10));
         panelForm.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         panelForm.add(new JLabel("Nombre:"));
@@ -37,21 +55,9 @@ public class ClienteDialog extends JDialog {
         txtApellido = new JTextField();
         panelForm.add(txtApellido);
 
-        panelForm.add(new JLabel("DNI:"));
-        txtDni = new JTextField();
-        panelForm.add(txtDni);
-
-        panelForm.add(new JLabel("Email:"));
-        txtEmail = new JTextField();
-        panelForm.add(txtEmail);
-
         panelForm.add(new JLabel("Teléfono:"));
         txtTelefono = new JTextField();
         panelForm.add(txtTelefono);
-
-        panelForm.add(new JLabel("Estado:"));
-        cmbEstado = new JComboBox<>(Cliente.Estado.values());
-        panelForm.add(cmbEstado);
 
         add(panelForm, BorderLayout.CENTER);
 
@@ -71,28 +77,31 @@ public class ClienteDialog extends JDialog {
 
     private void guardarCliente() {
         // Validaciones básicas vacías
-        if (txtNombre.getText().trim().isEmpty() || txtApellido.getText().trim().isEmpty() || txtDni.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nombre, Apellido y DNI son obligatorios.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+        if (txtNombre.getText().trim().isEmpty() || txtApellido.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Nombre y Apellido son obligatorios.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // Creamos el objeto Cliente con los datos del formulario
-        Cliente nuevo = new Cliente();
-        nuevo.setNombre(txtNombre.getText().trim());
-        nuevo.setApellido(txtApellido.getText().trim());
-        nuevo.setDni(txtDni.getText().trim());
-        nuevo.setEmail(txtEmail.getText().trim());
-        nuevo.setTelefono(txtTelefono.getText().trim());
-        nuevo.setEstado((Cliente.Estado) cmbEstado.getSelectedItem());
+        boolean esEdicion = clienteAEditar != null;
 
+        // Creamos el objeto Cliente con los datos del formulario
+        Cliente cliente = new Cliente();
+        cliente.setNombre(txtNombre.getText().trim());
+        cliente.setApellido(txtApellido.getText().trim());
+        cliente.setTelefono(txtTelefono.getText().trim());
+        // No seteamos estado: en alta lo deja null a propósito para que el backend aplique
+        // su regla por defecto (INACTIVO hasta el primer pago); en edición el backend lo ignora.
+
+        String textoBotonNormal = esEdicion ? "Guardar Cambios" : "Guardar";
         btnGuardar.setEnabled(false);
         btnGuardar.setText("Guardando...");
 
-        // Usamos SwingWorker para no congelar la pantalla al hacer el POST a Node.js
         SwingWorker<Cliente, Void> worker = new SwingWorker<>() {
             @Override
             protected Cliente doInBackground() throws Exception {
-                return clienteService.crearCliente(nuevo);
+                return esEdicion
+                        ? clienteService.actualizarCliente(clienteAEditar.getId(), cliente)
+                        : clienteService.crearCliente(cliente);
             }
 
             @Override
@@ -100,12 +109,13 @@ public class ClienteDialog extends JDialog {
                 try {
                     get(); // Si hubo error, salta al catch
                     guardadoExitoso = true;
-                    JOptionPane.showMessageDialog(ClienteDialog.this, "¡Cliente registrado con éxito!");
+                    JOptionPane.showMessageDialog(ClienteDialog.this,
+                            esEdicion ? "¡Cliente actualizado con éxito!" : "¡Cliente registrado con éxito!");
                     dispose(); // Cierra el diálogo
                 } catch (Exception e) {
                     JOptionPane.showMessageDialog(ClienteDialog.this, "Error al guardar: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                     btnGuardar.setEnabled(true);
-                    btnGuardar.setText("Guardar");
+                    btnGuardar.setText(textoBotonNormal);
                 }
             }
         };
