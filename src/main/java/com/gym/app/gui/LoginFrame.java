@@ -8,7 +8,7 @@ import java.awt.*;
 
 public class LoginFrame extends JFrame {
 
-    private JTextField txtEmail;
+    private JTextField txtUsuario;
     private JPasswordField txtPass;
     private JButton btnIngresar;
     private JLabel lblEstado;
@@ -38,13 +38,13 @@ public class LoginFrame extends JFrame {
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
         panel.add(lblTitulo, gbc);
 
-        // Campo Email
+        // Campo Usuario
         gbc.gridwidth = 2; gbc.gridy = 1;
-        panel.add(new JLabel("Correo Electrónico:"), gbc);
+        panel.add(new JLabel("Usuario:"), gbc);
 
-        txtEmail = new JTextField(20);
+        txtUsuario = new JTextField(20);
         gbc.gridy = 2;
-        panel.add(txtEmail, gbc);
+        panel.add(txtUsuario, gbc);
 
         // Campo Contraseña
         gbc.gridy = 3;
@@ -75,10 +75,10 @@ public class LoginFrame extends JFrame {
     }
 
     private void ejecutarLogin() {
-        String email = txtEmail.getText().trim();
-        String pass = new String(txtPass.getPassword()).trim();
+        String nombreUsuario = txtUsuario.getText().trim();
+        String contrasena = new String(txtPass.getPassword()).trim();
 
-        if (email.isEmpty() || pass.isEmpty()) {
+        if (nombreUsuario.isEmpty() || contrasena.isEmpty()) {
             lblEstado.setText("Complete todos los campos.");
             return;
         }
@@ -92,7 +92,7 @@ public class LoginFrame extends JFrame {
         SwingWorker<Usuario, Void> worker = new SwingWorker<>() {
             @Override
             protected Usuario doInBackground() throws Exception {
-                return authService.login(email, pass);
+                return authService.login(nombreUsuario, contrasena);
             }
 
             @Override
@@ -103,7 +103,7 @@ public class LoginFrame extends JFrame {
                     // ¡Login Exitoso! Cerramos Login y abrimos MainFrame
                     dispose();
                     SwingUtilities.invokeLater(() -> {
-                        MainFrame mainFrame = new MainFrame();
+                        MainFrame mainFrame = new MainFrame(usuarioLogueado);
                         mainFrame.setVisible(true);
                     });
 

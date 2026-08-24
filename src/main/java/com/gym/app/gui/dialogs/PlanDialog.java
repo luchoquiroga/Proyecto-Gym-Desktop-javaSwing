@@ -13,11 +13,24 @@ public class PlanDialog extends JDialog {
     private JButton btnGuardar, btnCancelar;
     private boolean guardadoExitoso = false;
     private final PlanService planService;
+    private final Plan planAEditar;
 
     public PlanDialog(Frame parent) {
         super(parent, "Registrar Nuevo Plan", true);
         this.planService = new PlanService();
+        this.planAEditar = null;
         initUI();
+    }
+
+    public PlanDialog(Frame parent, Plan planAEditar) {
+        super(parent, "Editar Plan", true);
+        this.planService = new PlanService();
+        this.planAEditar = planAEditar;
+        initUI();
+        txtNombre.setText(planAEditar.getNombre());
+        txtPrecio.setText(planAEditar.getPrecio().toPlainString());
+        txtDuracion.setText(String.valueOf(planAEditar.getDuracion()));
+        btnGuardar.setText("Guardar Cambios");
     }
 
     private void initUI() {
@@ -61,18 +74,23 @@ public class PlanDialog extends JDialog {
         }
 
         try {
-            Plan nuevo = new Plan();
-            nuevo.setNombre(txtNombre.getText().trim());
-            nuevo.setPrecio(new BigDecimal(txtPrecio.getText().trim()));
-            nuevo.setDuracionDias(Integer.parseInt(txtDuracion.getText().trim()));
+            boolean esEdicion = planAEditar != null;
 
+            Plan plan = new Plan();
+            plan.setNombre(txtNombre.getText().trim());
+            plan.setPrecio(new BigDecimal(txtPrecio.getText().trim()));
+            plan.setDuracion(Integer.parseInt(txtDuracion.getText().trim()));
+
+            String textoBotonNormal = esEdicion ? "Guardar Cambios" : "Guardar";
             btnGuardar.setEnabled(false);
             btnGuardar.setText("Guardando...");
 
             SwingWorker<Plan, Void> worker = new SwingWorker<>() {
                 @Override
                 protected Plan doInBackground() throws Exception {
-                    return planService.crearPlan(nuevo);
+                    return esEdicion
+                            ? planService.actualizarPlan(planAEditar.getId(), plan)
+                            : planService.crearPlan(plan);
                 }
 
                 @Override
@@ -80,12 +98,13 @@ public class PlanDialog extends JDialog {
                     try {
                         get();
                         guardadoExitoso = true;
-                        JOptionPane.showMessageDialog(PlanDialog.this, "¡Plan registrado con éxito!");
+                        JOptionPane.showMessageDialog(PlanDialog.this,
+                                esEdicion ? "¡Plan actualizado con éxito!" : "¡Plan registrado con éxito!");
                         dispose();
                     } catch (Exception e) {
                         JOptionPane.showMessageDialog(PlanDialog.this, "Error al guardar: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                         btnGuardar.setEnabled(true);
-                        btnGuardar.setText("Guardar");
+                        btnGuardar.setText(textoBotonNormal);
                     }
                 }
             };

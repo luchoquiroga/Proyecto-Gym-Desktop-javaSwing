@@ -1,5 +1,7 @@
 package com.gym.app.gui;
 
+import com.gym.app.models.Usuario;
+
 import javax.swing.*;
 import java.awt.*;
 
@@ -7,8 +9,10 @@ public class MainFrame extends JFrame {
 
     private JPanel panelContenedor;
     private CardLayout cardLayout;
+    private final Usuario usuarioActual;
 
-    public MainFrame() {
+    public MainFrame(Usuario usuarioActual) {
+        this.usuarioActual = usuarioActual;
         initUI();
     }
 
@@ -21,26 +25,31 @@ public class MainFrame extends JFrame {
         // El layout principal divide la ventana (Oeste para el menú, Centro para el contenido)
         setLayout(new BorderLayout());
 
+        boolean esAdmin = usuarioActual.getRol() == Usuario.Rol.ADMIN;
+
         // 1. Inicializamos el mazo de cartas (CardLayout) y su panel contenedor
         cardLayout = new CardLayout();
         panelContenedor = new JPanel(cardLayout);
 
         // 2. Agregamos las "cartas" (pantallas) al contenedor
-        // Por ahora usamos paneles de prueba. Luego reemplazaremos por new ClientePanel(), etc.
-        panelContenedor.add(new com.gym.app.gui.panels.DashboardPanel(), "DASHBOARD");
+        panelContenedor.add(new com.gym.app.gui.panels.DashboardPanel(esAdmin), "DASHBOARD");
         panelContenedor.add(new com.gym.app.gui.panels.ClientePanel(), "CLIENTES");
         panelContenedor.add(new com.gym.app.gui.panels.PlanPanel(), "PLANES");
         panelContenedor.add(new com.gym.app.gui.panels.PagoPanel(), "PAGOS");
+        // Gestión de usuarios: el backend restringe la creación de usuarios a rol ADMIN.
+        if (esAdmin) {
+            panelContenedor.add(new com.gym.app.gui.panels.UsuarioPanel(), "USUARIOS");
+        }
 
         // 3. Creamos el menú lateral
-        JPanel panelMenu = crearMenuLateral();
+        JPanel panelMenu = crearMenuLateral(esAdmin);
 
         // 4. Agregamos todo a la ventana principal
         add(panelMenu, BorderLayout.WEST);
         add(panelContenedor, BorderLayout.CENTER);
     }
 
-    private JPanel crearMenuLateral() {
+    private JPanel crearMenuLateral(boolean esAdmin) {
         JPanel menu = new JPanel();
         // BoxLayout acomoda los elementos uno debajo del otro
         menu.setLayout(new BoxLayout(menu, BoxLayout.Y_AXIS));
@@ -65,6 +74,11 @@ public class MainFrame extends JFrame {
         menu.add(crearBotonMenu("Gestión de Planes", "PLANES"));
         menu.add(Box.createRigidArea(new Dimension(0, 10)));
         menu.add(crearBotonMenu("Gestión de Pagos", "PAGOS"));
+
+        if (esAdmin) {
+            menu.add(Box.createRigidArea(new Dimension(0, 10)));
+            menu.add(crearBotonMenu("Gestión de Usuarios", "USUARIOS"));
+        }
 
         // Esto empuja el botón de salir hacia el fondo de la pantalla
         menu.add(Box.createVerticalGlue());

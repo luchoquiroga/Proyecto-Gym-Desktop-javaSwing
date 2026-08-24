@@ -4,42 +4,50 @@ import com.gym.app.models.Usuario;
 
 public class AuthService {
 
-    // Estructura que enviamos al servidor
+    // Estructura que enviamos al servidor (POST /usuarios/login)
     public static class LoginRequest {
-        private String email;
-        private String pass;
+        private String nombre;
+        private String contrasena;
 
-        public LoginRequest(String email, String pass) {
-            this.email = email;
-            this.pass = pass;
+        public LoginRequest(String nombre, String contrasena) {
+            this.nombre = nombre;
+            this.contrasena = contrasena;
         }
 
-        public String getEmail() { return email; }
-        public String getPass() { return pass; }
+        public String getNombre() { return nombre; }
+        public String getContrasena() { return contrasena; }
     }
 
-    // Estructura que esperamos recibir del servidor Node.js
+    // Estructura que devuelve el backend: {mensaje, token, id, nombre, rol} (plana, sin objeto "usuario" anidado)
     public static class LoginResponse {
         private String token;
-        private Usuario usuario;
+        private Integer id;
+        private String nombre;
+        private Usuario.Rol rol;
 
         public String getToken() { return token; }
-        public Usuario getUsuario() { return usuario; }
+        public Integer getId() { return id; }
+        public String getNombre() { return nombre; }
+        public Usuario.Rol getRol() { return rol; }
     }
 
     /**
-     * Autentica el usuario contra Node.js y guarda el Token en ApiClient
+     * Autentica el usuario contra el backend y guarda el Token en ApiClient
      */
-    public Usuario login(String email, String pass) throws Exception {
-        LoginRequest request = new LoginRequest(email, pass);
+    public Usuario login(String nombre, String contrasena) throws Exception {
+        LoginRequest request = new LoginRequest(nombre, contrasena);
 
-        // POST a la ruta /auth/login (Ajustá el endpoint según tu API en Node)
-        LoginResponse response = ApiClient.post("/login", request, LoginResponse.class);
+        LoginResponse response = ApiClient.post("/usuarios/login", request, LoginResponse.class);
 
         if (response != null && response.getToken() != null) {
             // Guardamos el token globalmente para todas las llamadas posteriores
             ApiClient.setJwtToken(response.getToken());
-            return response.getUsuario();
+
+            Usuario usuario = new Usuario();
+            usuario.setId(response.getId());
+            usuario.setNombre(response.getNombre());
+            usuario.setRol(response.getRol());
+            return usuario;
         } else {
             throw new Exception("Respuesta del servidor sin token de autenticación.");
         }
