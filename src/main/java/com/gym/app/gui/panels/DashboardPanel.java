@@ -61,21 +61,43 @@ public class DashboardPanel extends JPanel {
 
         this.add(panelNorte, BorderLayout.NORTH);
 
-        // Panel de Tarjetas (Grilla 2x2 con separación de 20px)
-        JPanel panelTarjetas = new JPanel(new GridLayout(2, 2, 20, 20));
-        panelTarjetas.setOpaque(false);
+        // Panel de Tarjetas. La tarjeta de recaudación solo aplica a ADMIN
+        // (único rol habilitado para /dashboard/ganancias-mensuales en el backend).
+        // Para ADMIN mantenemos la grilla 2x2 (4 tarjetas se ven bien estiradas).
+        // Para GERENCIA, en vez de un GridLayout de 1x3 (que estira las 3 tarjetas
+        // a todo el ancho), usamos un FlowLayout centrado con tarjetas de ancho fijo.
+        JPanel panelTarjetas;
 
         // Inicializamos las etiquetas de valor con "Cargando..." o "0"
         lblActivos = new JLabel("...", SwingConstants.CENTER);
         lblInactivos = new JLabel("...", SwingConstants.CENTER);
         lblTotalClientes = new JLabel("...", SwingConstants.CENTER);
-        lblRecaudacion = new JLabel("...", SwingConstants.CENTER);
 
-        // Agregamos las 4 tarjetas personalizadas
-        panelTarjetas.add(crearTarjeta("CLIENTES ACTIVOS", lblActivos, new Color(46, 204, 113)));     // Verde
-        panelTarjetas.add(crearTarjeta("CLIENTES INACTIVOS/MOROSOS", lblInactivos, new Color(231, 76, 60)));  // Rojo
-        panelTarjetas.add(crearTarjeta("TOTAL SOCIOS", lblTotalClientes, new Color(52, 152, 219)));   // Azul
-        panelTarjetas.add(crearTarjeta("RECAUDACIÓN DEL MES", lblRecaudacion, new Color(241, 196, 15))); // Dorado
+        JPanel tarjetaActivos = crearTarjeta("CLIENTES ACTIVOS", lblActivos, new Color(46, 204, 113));           // Verde
+        JPanel tarjetaInactivos = crearTarjeta("CLIENTES INACTIVOS/MOROSOS", lblInactivos, new Color(231, 76, 60)); // Rojo
+        JPanel tarjetaTotal = crearTarjeta("TOTAL SOCIOS", lblTotalClientes, new Color(52, 152, 219));           // Azul
+
+        if (esAdmin) {
+            panelTarjetas = new JPanel(new GridLayout(2, 2, 20, 20));
+            panelTarjetas.setOpaque(false);
+            panelTarjetas.add(tarjetaActivos);
+            panelTarjetas.add(tarjetaInactivos);
+            panelTarjetas.add(tarjetaTotal);
+
+            lblRecaudacion = new JLabel("...", SwingConstants.CENTER);
+            panelTarjetas.add(crearTarjeta("RECAUDACIÓN DEL MES", lblRecaudacion, new Color(241, 196, 15))); // Dorado
+        } else {
+            Dimension tamTarjeta = new Dimension(260, 150);
+            tarjetaActivos.setPreferredSize(tamTarjeta);
+            tarjetaInactivos.setPreferredSize(tamTarjeta);
+            tarjetaTotal.setPreferredSize(tamTarjeta);
+
+            panelTarjetas = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 20));
+            panelTarjetas.setOpaque(false);
+            panelTarjetas.add(tarjetaActivos);
+            panelTarjetas.add(tarjetaInactivos);
+            panelTarjetas.add(tarjetaTotal);
+        }
 
         this.add(panelTarjetas, BorderLayout.CENTER);
     }
@@ -136,7 +158,9 @@ public class DashboardPanel extends JPanel {
         // Ejecutamos ambas peticiones en un hilo secundario para no congelar la ventana
         new Thread(() -> {
             cargarEstadisticasClientes();
-            cargarRecaudacionMes();
+            if (esAdmin) {
+                cargarRecaudacionMes();
+            }
         }).start();
     }
 
@@ -178,18 +202,16 @@ public class DashboardPanel extends JPanel {
     }
 
     /**
-     * Endpoint restringido a rol ADMIN en el backend: si el usuario logueado es GERENCIA,
-     * la petición devuelve 403 y mostramos "N/A" en vez de romper el panel.
+     * Solo se invoca cuando esAdmin es true: es el único rol habilitado en el
+     * backend para consultar /dashboard/ganancias-mensuales.
      */
     private void cargarRecaudacionMes() {
         SwingUtilities.invokeLater(() -> lblRecaudacion.setText("..."));
 
         new Thread(() -> {
             try {
-                GananciasMensuales ganancias = esAdmin
-                        ? dashboardService.obtenerGananciasMensuales(
-                                (Integer) cbxAnio.getSelectedItem(), cbxMes.getSelectedIndex() + 1)
-                        : dashboardService.obtenerGananciasMensuales();
+                GananciasMensuales ganancias = dashboardService.obtenerGananciasMensuales(
+                        (Integer) cbxAnio.getSelectedItem(), cbxMes.getSelectedIndex() + 1);
                 SwingUtilities.invokeLater(() ->
                         lblRecaudacion.setText(String.format("$ %,.2f", ganancias.getTotalGanancias()))
                 );
